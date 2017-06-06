@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import ws3dproxy.CommandUtility;
 import ws3dproxy.WS3DProxy;
 import ws3dproxy.model.Creature;
 import ws3dproxy.model.Leaflet;
@@ -21,36 +22,28 @@ public class Environment extends EnvironmentImpl {
     private int ticksPerRun;
     private WS3DProxy proxy;
     private Creature creature;
-    private Thing food;
-    private Thing jewel;
-    private Thing blockAhead;
-    private List<Thing> thingAhead;
-    private Thing leafletJewel;
-    private String currentAction; 
+    public String currentAction; 
     public String Map="";
     private int gridSize = 25;
+    private int safeSpace = 10;
     private int envXSize = 800;
     private int envYSize = 600;
     private int numXCell = (int)Math.ceil(envXSize/gridSize);
     private int numYCell = (int)Math.ceil(envYSize/gridSize);
     private boolean[][] envGrid = new boolean[numXCell][numYCell];
-    private int targetXCell = numXCell-1;
-    private int targetYCell = numYCell-1;
+    private int targetXCell = numXCell-2;
+    private int targetYCell = numYCell-2;
     private List<int[]> possibleCells = new ArrayList<>();
-    private List<int[]> pathToTarget = new ArrayList<>();
+    public List<int[]> pathToTarget = new ArrayList<>();
     
     public Environment() {
         this.ticksPerRun = DEFAULT_TICKS_PER_RUN;
         this.proxy = new WS3DProxy();
         this.creature = null;
-        this.food = null;
-        this.jewel = null;
-        this.thingAhead = new ArrayList<>();
-        this.leafletJewel = null;
-        this.blockAhead = null;
-        this.currentAction = "rotate";
+        this.currentAction = "none";
     }
 
+    
     @Override
     public void init() {
         super.init();
@@ -59,19 +52,32 @@ public class Environment extends EnvironmentImpl {
         try {
             System.out.println("Reseting the WS3D World ...");
             proxy.getWorld().reset();
-            creature = proxy.createCreature(75,75,0);
-            World.createBrick(0, 795, 0, 800, 600);
-            World.createBrick(0, 0, 0, 800, 5);
-            World.createBrick(0, 0, 595, 800, 600);
-            World.createBrick(0, 0, 0, 5, 600);
-            World.createBrick(1, 150, 0, 155, 400);
-            World.createBrick(1, 350, 0, 355, 400);
-            World.createBrick(1, 550, 0, 555, 400);
-            World.createBrick(2, 250, 200, 255, 600);
-            World.createBrick(2, 450, 200, 455, 600);
+            creature = proxy.createCreature(50,50,0);
+            World.createBrick(2, 795, 0, 800, 600);
+            World.createBrick(2, 0, 0, 800, 5);
+            World.createBrick(2, 0, 595, 800, 600);
+            World.createBrick(2, 0, 0, 5, 600);
+            
+            World.createBrick(2, 127, 0, 130, 400);
+            World.createBrick(2, 250, 150, 255, 600);
+            World.createBrick(2, 250, 145, 325, 150);
+            //World.createBrick(2, 400, 145, 475, 150);
+            World.createBrick(2, 450, 150, 455, 300);
+            World.createBrick(2, 395, 295, 450, 300);
+            //World.createBrick(1, 350, 0, 355, 400);
+            //World.createBrick(2, 450, 200, 455, 600);
+            
+            World.createBrick(0, 395, 295, 400, 450);
+            World.createBrick(0, 400, 445, 550, 450);
+            World.createBrick(0, 550, 0, 555, 450);
             World.createBrick(2, 650, 200, 655, 600);
+            
+            World.createBrick(1, 720, 595, 775, 601);
+            
+            World.createFood(1, 790, 580);
+            creature.start();
             creature.moveto(3.0, 80, 80); 
-            creature.stop();
+            creature.move(0, 0, 0);
             System.out.println("Starting the WS3D Resource Generator ... ");
             //auto generates random startup enviroment
             //World.grow(1);
@@ -91,97 +97,70 @@ public class Environment extends EnvironmentImpl {
 
         @Override
         protected void runThisFrameworkTask() {
-            updateEnvironment();
             
-            recordBricks(creature.getThingsInVision());
+            updateEnvironment();
             performAction(currentAction);
-            pathToTarget=searchPath();
-            Map=mapStringer();
-            System.out.println(Map);
+           
         }
     }
 
     @Override
     public void resetState() {
-        currentAction = "rotate";
+        currentAction = "default";
     }
 
+    //return the state of the creature environment
     @Override
     public Object getState(Map<String, ?> params) {
-        Object requestedObject = null;
         String mode = (String) params.get("mode");
+        int[] cpos;
+        boolean flag=false;
         switch (mode) {
-            case "food":
-                requestedObject = food;
+            case "freeRight":
+                cpos=currentCreatureCell();
+                if (cpos[0]+1<=numXCell)
+                    if(ListContains(pathToTarget, new int[]{cpos[0]+1,cpos[1]}))
+                        flag=true;
                 break;
-            case "jewel":
-                requestedObject = jewel;
+            case "freeLeft":
+                cpos=currentCreatureCell();
+                if (cpos[0]-1>0)
+                    if(ListContains(pathToTarget, new int[]{cpos[0]-1,cpos[1]}))
+                        flag=true;
                 break;
-            case "thingAhead":
-                requestedObject = thingAhead;
+            case "freeDown":
+                cpos=currentCreatureCell();
+                if (cpos[1]+1<=numYCell)
+                    if(ListContains(pathToTarget, new int[]{cpos[0],cpos[1]+1}))
+                        flag=true;
                 break;
-            case "leafletJewel":
-                requestedObject = leafletJewel;
+            case "freeUp":
+                cpos=currentCreatureCell();
+                if (cpos[1]-1>0)
+                    if(ListContains(pathToTarget, new int[]{cpos[0],cpos[1]-1}))
+                        flag=true;
                 break;
-            case "blockAhead":
-                requestedObject = blockAhead;
             default:
                 break;
         }
-        return requestedObject;
+        return flag;
     }
 
     
     public void updateEnvironment() {
         creature.updateState();
-        food = null;
-        jewel = null;
-        leafletJewel = null;
-        blockAhead = null;
-        thingAhead.clear();
-                
-        for (Thing thing : creature.getThingsInVision()) {
-            if (creature.calculateDistanceTo(thing) <= Constants.OFFSET) {
-                // Identifica o objeto proximo
-                thingAhead.add(thing);
-                break;
-            } else if (thing.getCategory() == Constants.categoryJEWEL) {
-                if (leafletJewel == null) {
-                    // Identifica se a joia esta no leaflet
-                    for(Leaflet leaflet: creature.getLeaflets()){
-                        if (leaflet.ifInLeaflet(thing.getMaterial().getColorName()) &&
-                                leaflet.getTotalNumberOfType(thing.getMaterial().getColorName()) > leaflet.getCollectedNumberOfType(thing.getMaterial().getColorName())){
-                            leafletJewel = thing;
-                            break;
-                        }
-                    }
-                } else {
-                    // Identifica a joia que nao esta no leaflet
-                    jewel = thing;
-                }
-            } else if (food == null && creature.getFuel() <= 300.0
-                        && (thing.getCategory() == Constants.categoryFOOD
-                        || thing.getCategory() == Constants.categoryPFOOD
-                        || thing.getCategory() == Constants.categoryNPFOOD)) {
-                
-                    // Identifica qualquer tipo de comida
-                    food = thing;
-            }
-            else if (blockAhead == null && thing.getCategory() == Constants.categoryBRICK) {
-                    // Identifica parede mais próxima
-                    blockAhead = thing;
-            }
-           
-        }
+        recordBricks(creature.getThingsInVision());
+        pathToTarget=searchPath();
+        Map=mapStringer();
     }
     
-    
-    
-    @Override
-    public void processAction(Object action) {
-        String actionName = (String) action;
-        currentAction = actionName.substring(actionName.indexOf(".") + 1);
+    //returns the current creature Cell x,y
+    public int[] currentCreatureCell(){
+        int cxpos = (int)Math.ceil(creature.getPosition().getX()/gridSize);
+        int cypos = (int)Math.ceil(creature.getPosition().getY()/gridSize);
+        return new int[]{cxpos,cypos};
     }
+   
 
     // Checks if a Thing is inside the cell grid x,y
     private boolean isInsideGrid(Thing thing, int x, int y){
@@ -189,30 +168,34 @@ public class Environment extends EnvironmentImpl {
         int xmax = gridSize* x;
         int ymin = gridSize* y - gridSize;
         int ymax = gridSize* y;
-        if ((((int)thing.getX1()>=xmin && (int)thing.getX1()<xmax)
-                && ((int)thing.getY1()>=ymin && (int)thing.getY1()<ymax))
-                || (((int)thing.getX2()>=xmin && (int)thing.getX2()<xmax)
-                && ((int)thing.getY2()>=ymin && (int)thing.getY2()<ymax))
-                ||(((int)thing.getX1()>=xmin && (int)thing.getX1()<xmax)
-                && ((int)thing.getY2()>=ymin && (int)thing.getY2()<ymax))
-                || (((int)thing.getX2()>=xmin && (int)thing.getX2()<xmax)
-                && ((int)thing.getY1()>=ymin && (int)thing.getY1()<ymax))){
+        int y1 = (int)thing.getY1()-safeSpace;
+        int y2 = (int)thing.getY2()+safeSpace;
+        int x1 = (int)thing.getX1()-safeSpace;
+        int x2 = (int)thing.getX2()+safeSpace;
+        if (((x1>=xmin && x1<=xmax)
+                && (y1>=ymin && y1<=ymax))
+                || ((x2>=xmin && x2<=xmax)
+                && (y2>=ymin && y2<=ymax))
+                ||((x1>=xmin && x1<=xmax)
+                && (y2>=ymin && y2<=ymax))
+                || ((x2>=xmin && x2<=xmax)
+                && (y1>=ymin && y1<=ymax))){
             return true;
         }
-        else if (((xmin>=(int)thing.getX1() && xmin<(int)thing.getX2())
-                && (ymin>=(int)thing.getY1() && ymin<(int)thing.getY2()))
-                || ((xmax>=(int)thing.getX1() && xmax<(int)thing.getX2())
-                && (ymax>=(int)thing.getY1() && ymax<(int)thing.getY2()))
-                ||((xmin>=(int)thing.getX1() && xmin<(int)thing.getX2())
-                && (ymax>=(int)thing.getY1() && ymax<(int)thing.getY2()))
-                || ((xmax>=(int)thing.getX1() && xmax<(int)thing.getX2())
-                && (ymin>=(int)thing.getY1() && ymin<(int)thing.getY2()))){
+        else if (((xmin>=x1 && xmin<=x2)
+                && (ymin>=y1 && ymin<=y2))
+                || ((xmax>=x1 && xmax<=x2)
+                && (ymax>=y1 && ymax<=y2))
+                ||((xmin>=x1 && xmin<=x2)
+                && (ymax>=y1 && ymax<=y2))
+                || ((xmax>=x1 && xmax<=x2)
+                && (ymin>=y1 && ymin<=y2))){
             return true;
                     }
-        else if ((((((int)thing.getX1()<xmin && (int)thing.getX2()>=xmax)))
-                && (((int)thing.getY1()>=ymin && (int)thing.getY1()<ymax) || ((int)thing.getY2()>=ymin && (int)thing.getY2()<ymax)))
-                ||((((int)thing.getY1()<ymin && (int)thing.getY2()>=ymax))
-                && (((int)thing.getX1()>=xmin && (int)thing.getX1()<xmax) || ((int)thing.getX2()>=xmin && (int)thing.getX2()<xmax)))){
+        else if (((((x1<=xmin && x2>=xmax)))
+                && ((y1>=ymin && y1<=ymax) || (y2>=ymin && y2<=ymax)))
+                ||(((y1<=ymin && y2>=ymax))
+                && ((x1>=xmin && x1<=xmax) || (x2>=xmin && x2<=xmax)))){
             return true;
         }
         return false;
@@ -272,24 +255,6 @@ public class Environment extends EnvironmentImpl {
         return response;
     }
     
-    private String pathStringer(List<int[]> caminhos){
-        String response = "";
-        String pos;
-        for (int i = 1; i <= numYCell; i++) {
-            for (int j = 1; j <= numXCell; j++) {
-                pos = "_";
-                for (int[] caminho : caminhos) {
-                    if (caminho[0]==j && caminho[1]==i){
-                        pos = "O";
-                    }
-                }
-                response += pos;
-            }
-            response += System.getProperty("line.separator");
-        }
-        return response;
-    }
-    
     //Returns the cells list to the target
     private List<int[]> searchPath(){
         List<int[]> thisPathToTarget = new ArrayList<>();
@@ -301,17 +266,18 @@ public class Environment extends EnvironmentImpl {
         List<int[]> creaPos = new ArrayList();
         creaPos.add(new int[]{cxpos,cypos});
         thisPathToTarget = recursivePath(creaPos);
-        String pathString = "";
-        for (int[] cell : thisPathToTarget){
-        pathString+=("("+cell[0]+","+cell[1]+")"+System.getProperty("line.separator"));
-        }
+        thisPathToTarget.remove(thisPathToTarget.size() - 1);
+        //String pathString = "";
+        //for (int[] cell : thisPathToTarget){
+        //pathString+=("("+cell[0]+","+cell[1]+")"+System.getProperty("line.separator"));
+        //}
         //System.out.println(pathString);
         
         return thisPathToTarget;
     }
     
     //Checks if a INT[] is inside a LIST<INT[]>
-    private boolean ListContains(List<int[]> Lista, int[] cell){
+    public boolean ListContains(List<int[]> Lista, int[] cell){
         boolean aux = false;
         for (int[] tcell: Lista){
             if (tcell[0]==cell[0] && tcell[1]==cell[1])
@@ -401,46 +367,32 @@ public class Environment extends EnvironmentImpl {
     }
     
     
+     @Override
+    public void processAction(Object action) {
+        String actionName = (String) action;
+        currentAction = actionName.substring(actionName.indexOf(".") + 1);
+    }
+    
     //Performs the ACTION choosen by the system
     private void performAction(String currentAction) {
         try {
             //System.out.println("Action: "+currentAction);
-            switch ("a"){//currentAction) {
-                case "rotate":
-                    creature.rotate(1.0);
-                    //CommandUtility.sendSetTurn(creature.getIndex(), -1.0, -1.0, 3.0);
+            switch (currentAction){//currentAction) {
+                case "goRight":
+                    creature.moveto(2.0, creature.getPosition().getX()+5, creature.getPosition().getY());
                     break;
-                case "gotoFood":
-                    if (food != null) 
-                        creature.moveto(3.0, food.getX1(), food.getY1());
-                        //CommandUtility.sendGoTo(creature.getIndex(), 3.0, 3.0, food.getX1(), food.getY1());
+                case "goLeft":
+                    creature.moveto(2.0, creature.getPosition().getX()-5, creature.getPosition().getY());
                     break;
-                case "gotoJewel":
-                    if (leafletJewel != null)
-                        creature.moveto(3.0, leafletJewel.getX1(), leafletJewel.getY1());
-                        //CommandUtility.sendGoTo(creature.getIndex(), 3.0, 3.0, leafletJewel.getX1(), leafletJewel.getY1());
+                case "goDown":
+                    creature.moveto(2.0, creature.getPosition().getX(), creature.getPosition().getY()+5);                     
                     break;
-                case "goAround":
-                    if (blockAhead != null)
-                        //TO DO: implement equation to move to extreme part of object
-                        creature.moveto(3.0, 400, 300);//blockAhead.getX1(), blockAhead.getY1());
-                        //CommandUtility.sendGoTo(creature.getIndex(), 3.0, 3.0, leafletJewel.getX1(), leafletJewel.getY1());
+                case "goUp":
+                    creature.moveto(2.0, creature.getPosition().getX(), creature.getPosition().getY()-5);
+                    //CommandUtility.sendGoTo(creature.getIndex(), 3.0, 3.0, creature.getPosition().getX(), creature.getPosition().getY()-5);
                     break;                    
-                case "get":
-                    creature.move(0.0, 0.0, 0.0);
-                    //CommandUtility.sendSetTurn(creature.getIndex(), 0.0, 0.0, 0.0);
-                    if (thingAhead != null) {
-                        for (Thing thing : thingAhead) {
-                            if (thing.getCategory() == Constants.categoryJEWEL) {
-                                creature.putInSack(thing.getName());
-                            } else if (thing.getCategory() == Constants.categoryFOOD || thing.getCategory() == Constants.categoryNPFOOD || thing.getCategory() == Constants.categoryPFOOD) {
-                                creature.eatIt(thing.getName());
-                            }
-                        }
-                    }
-                    this.resetState();
-                    break;
                 default:
+                    creature.rotate(3.0);
                     break;
             }
         } catch (Exception e) {

@@ -84,12 +84,7 @@ public class pathPanel extends GuiPanelImpl {
     // End of variables declaration//GEN-END:variables
     private final static String newLine = "\n";
     private Environment environment;
-
-    public void setText(String sInput)
-    {
-      jTextArea1.append(sInput+newLine);
-    }
-    
+  
     @Override
     public void initPanel(String[] param) 
     {
@@ -108,13 +103,10 @@ public class pathPanel extends GuiPanelImpl {
     @Override
     public void refresh() 
     {
-       String sAux;
-       
        if (this.environment != null)
        {
-           //sAux = this.environment.getLastAction();
-           //setText("CU");
            jTextArea1.setText(this.environment.Map);
+           jLabel1.setText("Ação escolhida: "+this.environment.currentAction);
        }
     }
 }

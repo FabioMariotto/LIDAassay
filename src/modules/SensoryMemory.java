@@ -10,65 +10,57 @@ import ws3dproxy.model.Thing;
 public class SensoryMemory extends SensoryMemoryImpl {
 
     private Map<String, Object> sensorParam;
-    private Thing food;
-    private Thing jewel;
-    private Thing blockAhead;
-    private List<Thing> thingAhead;
-    private Thing leafletJewel;
+    private boolean freeRight;
+    private boolean freeLeft;
+    private boolean freeUp;
+    private boolean freeDown;
 
     public SensoryMemory() {
         this.sensorParam = new HashMap<>();
-        this.food = null;
-        this.jewel = null;
-        this.thingAhead = new ArrayList<>();
-        this.leafletJewel = null;
-        this.blockAhead = null;
+        this.freeRight = false;
+        this.freeLeft= false;
+        this.freeUp= false;
+        this.freeDown= false;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void runSensors() {
         sensorParam.clear();
-        sensorParam.put("mode", "food");
-        food = (Thing) environment.getState(sensorParam);
+        sensorParam.put("mode", "freeRight");
+        freeRight = (boolean) environment.getState(sensorParam);
         sensorParam.clear();
-        sensorParam.put("mode", "blockAhead");
-        blockAhead = (Thing) environment.getState(sensorParam);
+        sensorParam.put("mode", "freeLeft");
+        freeLeft = (boolean) environment.getState(sensorParam);
         sensorParam.clear();
-        sensorParam.put("mode", "jewel");
-        jewel = (Thing) environment.getState(sensorParam);
+        sensorParam.put("mode", "freeUp");
+        freeUp = (boolean) environment.getState(sensorParam);
         sensorParam.clear();
-        sensorParam.put("mode", "thingAhead");
-        thingAhead = (List<Thing>) environment.getState(sensorParam);
-        sensorParam.clear();
-        sensorParam.put("mode", "leafletJewel");
-        leafletJewel = (Thing) environment.getState(sensorParam);
+        sensorParam.put("mode", "freeDown");
+        freeDown = (boolean) environment.getState(sensorParam);
     }
 
     @Override
     public Object getSensoryContent(String modality, Map<String, Object> params) {
-        Object requestedObject = null;
+        boolean response=false;
         String mode = (String) params.get("mode");
         switch (mode) {
-            case "food":
-                requestedObject = food;
+            case "freeRight":
+                response = freeRight;
                 break;
-            case "jewel":
-                requestedObject = jewel;
+            case "freeLeft":
+                response = freeLeft;
                 break;
-            case "thingAhead":
-                requestedObject = thingAhead;
+            case "freeUp":
+                response = freeUp;
                 break;
-            case "blockAhead":
-                requestedObject = blockAhead;
-                break;
-            case "leafletJewel":
-                requestedObject = leafletJewel;
+            case "freeDown":
+                response = freeDown;
                 break;
             default:
                 break;
         }
-        return requestedObject;
+        return response;
     }
 
     @Override

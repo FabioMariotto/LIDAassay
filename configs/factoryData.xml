@@ -106,32 +106,26 @@
             <associatedmodule>SensoryMemory</associatedmodule>
             <associatedmodule>PerceptualAssociativeMemory</associatedmodule>
         </task>
-        <task name="FoodDetector">
-            <class>detectors.FoodDetector</class>
+        <task name="freeRightDetector">
+            <class>detectors.freeRightDetector</class>
             <ticksperrun>3</ticksperrun>
             <associatedmodule>SensoryMemory</associatedmodule>
             <associatedmodule>PerceptualAssociativeMemory</associatedmodule>
         </task>
-        <task name="ThingAheadDetector">
-            <class>detectors.ThingAheadDetector</class>
+        <task name="freeLeftDetector">
+            <class>detectors.freeLeftDetector</class>
             <ticksperrun>3</ticksperrun>
             <associatedmodule>SensoryMemory</associatedmodule>
             <associatedmodule>PerceptualAssociativeMemory</associatedmodule>
         </task>
-        <task name="blockAheadDetector">
-            <class>detectors.blockAheadDetector</class>
+        <task name="freeUpDetector">
+            <class>detectors.freeUpDetector</class>
             <ticksperrun>3</ticksperrun>
             <associatedmodule>SensoryMemory</associatedmodule>
             <associatedmodule>PerceptualAssociativeMemory</associatedmodule>
         </task>
-        <task name="LeafletJewelDetector">
-            <class>detectors.LeafletJewelDetector</class>
-            <ticksperrun>3</ticksperrun>
-            <associatedmodule>SensoryMemory</associatedmodule>
-            <associatedmodule>PerceptualAssociativeMemory</associatedmodule>
-        </task>
-        <task name="JewelDetector">
-            <class>detectors.JewelDetector</class>
+        <task name="freeDownDetector">
+            <class>detectors.freeDownDetector</class>
             <ticksperrun>3</ticksperrun>
             <associatedmodule>SensoryMemory</associatedmodule>
             <associatedmodule>PerceptualAssociativeMemory</associatedmodule>
